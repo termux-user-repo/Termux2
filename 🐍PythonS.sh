@@ -1,101 +1,78 @@
 #!/bin/bash
 
-# --- AUTO DEPENDENCY INSTALLER ---
-echo "Checking system environment..."
+# Ensure required tools are present
+if ! command -v curl &> /dev/null; then
+    command -v pkg &> /dev/null && pkg install curl -y
+    command -v apk &> /dev/null && apk add curl
+fi
 
-# Function to install python dependencies
-install_deps() {
-    echo "[!] Installing/Updating python dependencies..."
-    # Use --break-system-packages for modern distros, or user-local install
-    if python3 -m pip install --upgrade pip &> /dev/null; then
-        python3 -m pip install requests --break-system-packages &> /dev/null || python3 -m pip install --user requests
-    else
-        echo "[!] Warning: Could not auto-install requests. Please run: pip install requests"
-    fi
+# Animation function
+loading() {
+    local duration=$1
+    local message=$2
+    local end_time=$((SECONDS + duration))
+    local syms=("\\" "|" "/" "-")
+    while [ $SECONDS -lt $end_time ]; do
+        for s in "${syms[@]}"; do
+            printf "\r%s [%s]" "$message" "$s"
+            sleep 0.1
+        done
+    done
+    printf "\r%s [Done]    \n" "$message"
 }
 
-if ! command -v python3 &> /dev/null; then
-    echo "[!] python3 not found. Please install it via your system package manager."
-    exit 1
-fi
-
-# Ensure requests is available
-if ! python3 -c "import requests" &> /dev/null; then
-    install_deps
-fi
-
-# --- RUN THE INTERACTIVE SCRIPT ---
-python3 - << 'EOF'
-import sys
-import time
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-def spinning_cursor(duration, message=""):
-    symbols = ['\\', '|', '/', '-']
-    end_time = time.time() + duration
-    idx = 0
-    while time.time() < end_time:
-        sys.stdout.write(f'\r{message} {symbols[idx % len(symbols)]} ')
-        sys.stdout.flush()
-        time.sleep(0.1)
-        idx += 1
-    sys.stdout.write('\r' + ' ' * (len(message) + 10) + '\r')
-    sys.stdout.flush()
-
-def fetch_local_data():
-    if not requests:
-        print("\n[!] Error: 'requests' module is missing.")
-        return None
-    try:
-        response = requests.get("http://ip-api.com/json/", timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"\n[!] Connection Error: {e}")
-        return None
-
-# --- MAIN EXECUTION ---
-print("—" * 40)
-print("\n      W E L C O M E   T O   🐍   p y t h o n S\n")
-print("—" * 40)
-
-spinning_cursor(2.0, "🐍 Python sys launching")
-
-print("System initialized.")
-print("—" * 40)
-
-ascii_art = """
+# --- UI ELEMENTS ---
+show_ascii() {
+    cat << "EOF"
                 _   _                 ____  
   _ __  _   _ _| |_| |__   ___  _ __ / ___| 
- | '_ \| | | | __| '_ \ / _ \| '_ \\___ \ 
+ | '_ \| | | | __| '_ \ / _ \| '_ \ \___ \ 
  | |_) | |_| | |_| | | | (_) | | | |___) |
  | .__/ \__, |\__|_| |_|\___/|_| |_|____/ 
  |_|    |___/                             
-"""
-print(ascii_art)
-
-while True:
-    print("|—— 1: IP | 2: Geo | 3: Exit ——|")
-    choice = input("|_ Choice: ").strip()
-    
-    if choice == "1":
-        data = fetch_local_data()
-        if data:
-            print(f"\n>>> Your Public IP: {data.get('query')}\n")
-    elif choice == "2":
-        data = fetch_local_data()
-        if data:
-            print("\n>>> Current Geolocation Info:")
-            for key in ['country', 'regionName', 'city', 'lat', 'lon', 'isp']:
-                print(f"    {key.capitalize():<10}: {data.get(key)}")
-            print("")
-    elif choice == "3":
-        print("Exiting...")
-        break
-    else:
-        print("\n[!] Invalid input.\n")
 EOF
+}
+
+# --- INITIAL LAUNCH ---
+clear
+echo "————————————————————————————————————————"
+echo "      W E L C O M E   T O   🐍   p y t h o n S"
+echo "————————————————————————————————————————"
+loading 3 "🐍 PythonS System Launching"
+echo "System Initialized."
+
+# --- MAIN MENU LOOP ---
+while true; do
+    # Clear screen and show header every time the menu loops
+    clear
+    show_ascii
+    echo -e "\n|—— 1: IP | 2: Geo | 3: Exit ——|"
+    read -p "|_ Choice: " choice
+    
+    case $choice in
+        1)
+            loading 1.5 "Requesting Public IP..."
+            ip=$(curl -s https://ipapi.co/ip/)
+            echo -e "\n>>> Your Public IP: $ip"
+            read -p "Press Enter to return to menu..."
+            ;;
+        2)
+            loading 1.5 "Locating Server Coordinates..."
+            data=$(curl -s https://ip-api.com/json/)
+            echo -e "\n>>> Current Geolocation Info:"
+            echo "    Country:   $(echo $data | grep -o '"country":"[^"]*"' | cut -d'"' -f4)"
+            echo "    City:      $(echo $data | grep -o '"city":"[^"]*"' | cut -d'"' -f4)"
+            echo "    ISP:       $(echo $data | grep -o '"isp":"[^"]*"' | cut -d'"' -f4)"
+            echo ""
+            read -p "Press Enter to return to menu..."
+            ;;
+        3)
+            echo "Shutting down..."
+            exit 0
+            ;;
+        *)
+            echo "[!] Invalid input."
+            sleep 1
+            ;;
+    esac
+done
