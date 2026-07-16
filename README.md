@@ -15,5 +15,7 @@ Selmux is a specialized shell utility for terminal-based environments. It provid
 ```bash
 #!/bin/bash
 
-echo "Hello SELMUX"
-```
+rm selmux.sh
+curl -O https://raw.githubusercontent.com/termux-user-repo/Termux2/refs/heads/main/selmux.sh
+chmod +x selmux.sh
+./selmux.sh
