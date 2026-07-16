@@ -1,51 +1,83 @@
 #!/bin/bash
 
-# --- ASCII Art ---
 clear
-echo "  ____  _____ _     __  __ _   _ __  __ "
-echo " / ___|| ____| |   |  \/  | | | |  \/  |"
-echo " \___ \|  _| | |   | |\/| | | | | |\/| |"
-echo "  ___) | |___| |___| |  | | |_| | |  | |"
-echo " |____/|_____|_____|_|  |_|\___/|_|  |_|"
-echo "          SH .beta.                        "
-echo ""
 
-# --- Loading Animation ---
-echo -n "Loading: "
-spinner="\|/-"
-for i in {1..8}; do
-    echo -ne "\rLoading: ${spinner:i%4:1}"
-    sleep 0.2
-done
-echo -e "\rLoading Complete!    \n"
-
-# --- Main Menu ---
-echo "1 — IP Giver"
-echo "2 — GeoLocation"
-echo "3 — System Uptime"
-echo "4 — Check Disk Space"
-echo "5 — Exit"
-
-# Force input from keyboard
-read -p "Select [1-5]: " choice </dev/tty
+echo "===================================="
+echo "         SELMUX.SH BETA"
+echo "===================================="
+echo
+echo "Are you using?"
+echo "1) iSH Terminal"
+echo "2) Termux"
+echo
+read -p "Select (1-2): " choice
 
 case $choice in
     1)
-        echo -n "Your Public IP: "
-        curl -s https://ifconfig.me
-        echo "" ;;
+        PLATFORM="iSH Terminal"
+        ;;
     2)
-        echo "Fetching Location..."
-        curl -s https://ipapi.co/json | grep -E 'city|region|country_name' ;;
-    3)
-        echo -n "System Uptime: "
-        uptime ;;
-    4)
-        echo "Disk Usage:"
-        df -h | grep '^/dev/' ;;
-    5)
-        echo "Exiting..."
-        exit ;;
+        PLATFORM="Termux"
+        ;;
     *)
-        echo "Invalid Selection." ;;
+        echo "Invalid selection."
+        exit 1
+        ;;
+esac
+
+clear
+echo "Loading required files for $PLATFORM..."
+
+spinner='|/-\'
+for i in {1..40}; do
+    printf "\r%c" "${spinner:i%4:1}"
+    sleep 0.08
+done
+
+clear
+
+cat << "EOF"
+
+   _____      _                     
+  / ____|    | |                    
+ | (___   ___| |_ __ ___  _   ___  __
+  \___ \ / _ \ | '_ ` _ \| | | \ \/ /
+  ____) |  __/ | | | | | | |_| |>  <
+ |_____/ \___|_|_| |_| |_|\__,_/_/\_\
+
+           SELMUX.SH BETA
+
+==========================================
+ Features
+==========================================
+|------ 1. IP Locator
+|          Locates user's public IP
+|
+|------ 2. GeoLocation
+|          Shows approximate location
+|
+|------ selmux.SH beta file thanks ------|
+==========================================
+
+EOF
+
+echo
+read -p "Choose a feature (1-2): " feature
+
+case $feature in
+    1)
+        echo
+        echo "Public IP:"
+        curl -s https://api.ipify.org
+        echo
+        ;;
+    2)
+        echo
+        echo "Geolocation:"
+        curl -s https://ipapi.co/json/
+        echo
+        ;;
+    *)
+        echo "Invalid option."
+        ;;
 esac
