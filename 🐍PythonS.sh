@@ -2,24 +2,26 @@
 
 # --- AUTO DEPENDENCY INSTALLER ---
 echo "Checking system environment..."
-if ! command -v python3 &> /dev/null; then
-    echo "[!] python3 not found. Installing automatically..."
-    if command -v pkg &> /dev/null; then
-        # Termux Environment
-        pkg update -y && pkg install python python-pip -y
-    elif command -v apk &> /dev/null; then
-        # iSH / Alpine Environment
-        apk update && apk add python3 py3-pip py3-requests
+
+# Function to install python dependencies
+install_deps() {
+    echo "[!] Installing/Updating python dependencies..."
+    # Use --break-system-packages for modern distros, or user-local install
+    if python3 -m pip install --upgrade pip &> /dev/null; then
+        python3 -m pip install requests --break-system-packages &> /dev/null || python3 -m pip install --user requests
     else
-        echo "[!] Unsupported system package manager. Please install python3 manually."
+        echo "[!] Warning: Could not auto-install requests. Please run: pip install requests"
     fi
+}
+
+if ! command -v python3 &> /dev/null; then
+    echo "[!] python3 not found. Please install it via your system package manager."
+    exit 1
 fi
 
-# Try to ensure the requests library is available for API lookups
-python3 -c "import requests" &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "[!] Installing Python requests library..."
-    pip install requests &> /dev/null || pkg install python-requests -y &> /dev/null || apk add py3-requests &> /dev/null
+# Ensure requests is available
+if ! python3 -c "import requests" &> /dev/null; then
+    install_deps
 fi
 
 # --- RUN THE INTERACTIVE SCRIPT ---
@@ -35,47 +37,37 @@ except ImportError:
 def spinning_cursor(duration, message=""):
     symbols = ['\\', '|', '/', '-']
     end_time = time.time() + duration
+    idx = 0
     while time.time() < end_time:
-        for symbol in symbols:
-            sys.stdout.write(f'\r{message} "{symbol}" ')
-            sys.stdout.flush()
-            time.sleep(0.1)
-    # Clear line
-    sys.stdout.write('\r' + ' ' * (len(message) + 15) + '\r')
+        sys.stdout.write(f'\r{message} {symbols[idx % len(symbols)]} ')
+        sys.stdout.flush()
+        time.sleep(0.1)
+        idx += 1
+    sys.stdout.write('\r' + ' ' * (len(message) + 10) + '\r')
     sys.stdout.flush()
 
 def fetch_local_data():
     if not requests:
-        print("\n[!] Error: 'requests' module is missing. Run pip install requests.")
+        print("\n[!] Error: 'requests' module is missing.")
         return None
     try:
-        # Fetching current user's IP info securely via a public API
         response = requests.get("http://ip-api.com/json/", timeout=5)
+        response.raise_for_status()
         return response.json()
     except Exception as e:
         print(f"\n[!] Connection Error: {e}")
         return None
 
-# --- STEP 1: Welcome Screen ---
+# --- MAIN EXECUTION ---
 print("—" * 40)
 print("\n      W E L C O M E   T O   🐍   p y t h o n S\n")
 print("—" * 40)
 
-# --- STEP 2: First Launch Animation (Extended to 6 seconds) ---
-spinning_cursor(6.0, "🐍 Python sys 2 launching")
+spinning_cursor(2.0, "🐍 Python sys launching")
 
-# --- STEP 3: Downloads & Installer ---
-print("USER İP GIVER DOWNLOAD...")
-time.sleep(0.4)
-
-print("Sys downloaded !")
-time.sleep(0.2)
+print("System initialized.")
 print("—" * 40)
 
-# --- STEP 4: Secondary Launch (Extended to 4 seconds) ---
-spinning_cursor(4.0, "Python system launching (——-)")
-
-# --- STEP 5: ASCII Art ---
 ascii_art = """
                 _   _                 ____  
   _ __  _   _ _| |_| |__   ___  _ __ / ___| 
@@ -86,34 +78,24 @@ ascii_art = """
 """
 print(ascii_art)
 
-# --- STEP 6: Interactive Menu System ---
 while True:
-    print("|—— 1 ip giver ——— 2 geo location giver ——|")
-    print("\nBeta")
-    sys.stdout.write("|_ ")
-    sys.stdout.flush()
-    choice = input().strip()
+    print("|—— 1: IP | 2: Geo | 3: Exit ——|")
+    choice = input("|_ Choice: ").strip()
     
     if choice == "1":
-        spinning_cursor(1.5, "Requesting Public IP...")
         data = fetch_local_data()
         if data:
             print(f"\n>>> Your Public IP: {data.get('query')}\n")
-        print("—" * 40)
-        
     elif choice == "2":
-        spinning_cursor(1.5, "Locating Server Coordinates...")
         data = fetch_local_data()
         if data:
             print("\n>>> Current Geolocation Info:")
-            print(f"    Country:   {data.get('country')} ({data.get('countryCode')})")
-            print(f"    Region:    {data.get('regionName')}")
-            print(f"    City:      {data.get('city')}")
-            print(f"    Latitude:  {data.get('lat')}")
-            print(f"    Longitude: {data.get('lon')}")
-            print(f"    Provider:  {data.get('isp')}\n")
-        print("—" * 40)
-        
+            for key in ['country', 'regionName', 'city', 'lat', 'lon', 'isp']:
+                print(f"    {key.capitalize():<10}: {data.get(key)}")
+            print("")
+    elif choice == "3":
+        print("Exiting...")
+        break
     else:
-        print("\n[!] Invalid input. Choose Option 1 or 2.\n")
+        print("\n[!] Invalid input.\n")
 EOF
